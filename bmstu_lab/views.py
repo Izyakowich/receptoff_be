@@ -41,12 +41,17 @@ def GetProducts(request):
     subs = GetData()
     res = []
 
-    for sub in subs:
-        if query is not None:
-            if query.lower() in sub["title"].lower():
-                res.append(sub)
-        else:
-            res = subs
+    if query is None:
+        return render(
+            request, "products.html", {"data": {"products": GetData(), "query_c": ""}}
+        )
+    else:
+        for sub in subs:
+            if query is not None:
+                if query.lower() in sub["title"].lower():
+                    res.append(sub)
+            else:
+                res = subs
 
     return render(
         request, "products.html", {"data": {"products": res, "query_c": query}}
