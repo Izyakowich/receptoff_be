@@ -4,11 +4,10 @@
 
 {% block content %}
     <div class="product_details">
-        <img src="{{ data.product.img }}" width="450", height="350">
+        <img src="{{ data.photo }}" width="450", height="350">
         <h3>
-        <div>Название   {{ data.product.title }} </div>
-        <div>Категория  {{ data.product.cathegory }}</div>
-        <div>Вкус  {{ data.product.taste }}</div>
+        <div>Название   {{ data.product_name }} </div>
+        <div>Описание  {{ data.product_info }}</div>
     </h3>
     </div>
 
