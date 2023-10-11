@@ -37,11 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
-    "bmstu_lab",
-
-    # DRF
     "rest_framework",
+    "bmstu_lab",
 ]
 
 MIDDLEWARE = [

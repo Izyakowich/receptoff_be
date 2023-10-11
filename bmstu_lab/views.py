@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect
-from datetime import date
 from bmstu_lab.models import *
 import psycopg2
-
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from .serializers import ProductSerializer
+from rest_framework.decorators import api_view
 
 
 def GetProducts(request):
@@ -16,6 +19,16 @@ def GetProducts(request):
         ) & Products.objects.filter(status="enabled")
         return render(request, "products.html", {"products": data, "query_c": query})
     return render(request, "products.html", {"products": data, "query_c": ""})
+
+@api_view(['Get'])
+def GetProductss(request, format=None):
+    """
+    Возвращает список объектов
+    """
+    print('get')
+    product = Products.objects.all()
+    serializer = ProductSerializer(product, many=True)
+    return Response(serializer.data)
 
 
 def GetProduct(request, id):
