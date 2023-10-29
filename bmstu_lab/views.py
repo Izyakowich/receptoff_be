@@ -76,7 +76,7 @@ def PostProductToApplication(request, pk):
         return Response("Такого продукта нет", status=400)
     try:
         application_product = ApplicationProducts.objects.get(application_id=application_id, product_id=product)
-        return Response("Такой абонемент уже добавлен в заявку")
+        return Response("Такой рецепт уже добавлен в заявку")
     except ApplicationProducts.DoesNotExist:
         application_product = ApplicationProducts(
             application_id=application_id,
@@ -105,7 +105,7 @@ def putProducts(request, pk):
 @api_view(['DELETE'])
 def deleteProduct(request, pk):
     if not Products.objects.filter(pk=pk).exists():
-        return Response(f"Абонемента с таким id нет")
+        return Response(f"Продукта с таким id нет")
     product = Products.objects.get(pk=pk)
     product.status = "deleted"
     product.save()
@@ -211,7 +211,7 @@ def putApplicationByUser(request):
     try:
         application = get_object_or_404(Application, user_id=current_user, status="Зарегистрирован")
     except:
-        return Response("Такой заявки не зарегистрировано")
+        return Response("Такой заявки нет")
     
     application.status = "Проверяется"
     application.processed_at=datetime.now().date()
@@ -222,21 +222,21 @@ def putApplicationByUser(request):
 
 
 @api_view(['PUT'])
-def PutApplicationSubscription(request, pk):
+def PutApplicationProduct(request, pk):
     current_user = CurrentUserSingleton.get_instance()
     application = get_object_or_404(Application, id_user=current_user, status="Зарегистрирован")
     
     try:
         product = Products.objects.get(pk=pk, status='enabled')
     except Products.DoesNotExist:
-        return Response("Такой услуги нет", status=400)
+        return Response("Такого продукта нет", status=400)
     
     application_product = ApplicationProducts.objects.filter(id_application=application, product_id=product).first()
     if application_product:
         product_id = request.data.get('product_id')
         try:
-            subscription = Products.objects.get(id=product_id, status='enabled')
-            application_product.product_id = subscription
+            product = Products.objects.get(id=product_id, status='enabled')
+            application_product.product_id = product
             application_product.save()
             serializer = ApplicationProductstSerializer(application_product, data=request.data, partial=True)
             if serializer.is_valid():
@@ -245,13 +245,13 @@ def PutApplicationSubscription(request, pk):
             else:
                 return Response(serializer.errors, status=400)
         except Products.DoesNotExist:
-            return Response("Такой услуги нет", status=400)
+            return Response("Такого продукта нет", status=400)
     else:
         return Response("Заявка не найдена", status=404)
     
 
 @api_view(['DELETE'])
-def DeleteApplicationSubscription(request, pk):
+def DeleteApplicationProduct(request, pk):
     current_user = CurrentUserSingleton.get_instance()
     application = get_object_or_404(Application, id_user=current_user, status="Зарегистрирован")
     try:
@@ -259,14 +259,14 @@ def DeleteApplicationSubscription(request, pk):
         try:
             application_product = get_object_or_404(ApplicationProducts, id_application=application, id_subscription=product)
             application_product.delete()
-            return Response("Абонемент удален", status=200)
-            # application_subscription = ApplicationSubscription.objects.all()
-            # serializer = ApplicationSubscriptionSerializer(application_subscription, many=True)
+            return Response("Продукт удален", status=200)
+            # application_product = ApplicationProducts.objects.all()
+            # serializer = ApplicationProductstSerializer(application_product, many=True)
             # return Response(serializer.data)
         except ApplicationProducts.DoesNotExist:
             return Response("Заявка не найдена", status=404)
     except Products.DoesNotExist:
-        return Response("Такой услуги нет", status=400)
+        return Response("Такого продукта нет", status=400)
 
 
 
