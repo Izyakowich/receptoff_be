@@ -26,7 +26,21 @@ urlpatterns = [
     path("", views.GetProducts),
     path("product/<int:id>/", views.GetProduct, name="product_url"),
     path("delete", views.DeleteProduct),
-    path('', include(router.urls)),
 
-    path(r'products/', views.GetProductss, name="products-list"),
+    path('', include(router.urls)),
+    path('products/', views.GetProductss, name="products-list"),
+    path('products/<int:pk>', views.GetProductsById, name="get-product-by-id"),
+    path('products/<int:pk>/delete', views.deleteProduct, name="delete-product"),
+    path('products/<int:pk>/post', views.PostProductToApplication, name="add-product-to-application"),
+    path('products/<int:pk>/put', views.putProducts, name="put-product"),
+    path('products/post', views.PostProduct, name="post-product"),
+
+    path('applications', views.getApplications, name = 'applications-list'),
+    path('applications/<int:pk>', views.getApplication, name = 'application'),
+    path('applications/<int:pk>/delete', views.deleteApplication, name = 'application_delete'),
+    path('applications/<int:pk>/put', views.putApplication, name = 'application_put'),
+
+    path('applications/<int:pk>/adminput', views.putApplicationByAdmin, name = 'application_by_admin'),
+    path('applications/userput', views.putApplicationByUser, name = 'application_by_user'),
+
 ]
