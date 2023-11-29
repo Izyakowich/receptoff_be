@@ -26,7 +26,7 @@ class CurrentUserSingleton:
 
 
 @api_view(["GET"])
-def GetProductss(request, format=None):
+def GetProducts(request, format=None):
     """
     Возвращает список объектов
     """
