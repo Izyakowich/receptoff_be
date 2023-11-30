@@ -9,6 +9,12 @@ from rest_framework.decorators import api_view
 from datetime import datetime
 from django.db.models import Q
 from minio import Minio
+from drf_yasg.utils import swagger_auto_schema
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponse
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import permission_classes
 
 
 class CurrentUserSingleton:
@@ -46,6 +52,7 @@ def GetProductsById(request, pk):
         return Response(serializer.data)
 
 
+@swagger_auto_schema(method="post", request_body=ProductSerializer)
 @api_view(["POST"])
 def PostProduct(request):
     serializer = ProductSerializer(data=request.data)
@@ -77,6 +84,7 @@ def PostProduct(request):
     return Response(serializer.data)
 
 
+@swagger_auto_schema(method="post", request_body=ProductSerializer)
 @api_view(["POST"])
 def PostProductToApplication(request, pk):
     current_user = CurrentUserSingleton.get_instance()
@@ -116,6 +124,7 @@ def PostProductToApplication(request, pk):
     return Response(serializer.data)
 
 
+@swagger_auto_schema(method="put", request_body=ProductSerializer)
 @api_view(["PUT"])
 def putProducts(request, pk):
     if not Products.objects.filter(pk=pk).exists():
@@ -202,6 +211,7 @@ def deleteApplication(request, pk):
     return Response(serializer.data)
 
 
+@swagger_auto_schema(method="put", request_body=ApplicationSerializer)
 @api_view(["PUT"])
 def putApplication(request, pk):
     try:
@@ -218,6 +228,7 @@ def putApplication(request, pk):
     return Response(serializer.data)
 
 
+@swagger_auto_schema(method="put", request_body=ApplicationSerializer)
 @api_view(["PUT"])
 def putApplicationByAdmin(request, pk):
     if not Application.objects.filter(pk=pk).exists():
@@ -234,6 +245,7 @@ def putApplicationByAdmin(request, pk):
     return Response(serializer.data)
 
 
+@swagger_auto_schema(method="put", request_body=ApplicationSerializer)
 @api_view(["PUT"])
 def putApplicationByUser(request):
     current_user = CurrentUserSingleton.get_instance()
@@ -251,6 +263,7 @@ def putApplicationByUser(request):
     return Response(serializer.data)
 
 
+@swagger_auto_schema(method="put", request_body=ApplicationProductstSerializer)
 @api_view(["PUT"])
 def PutApplicationProduct(request, pk):
     current_user = CurrentUserSingleton.get_instance()
@@ -307,3 +320,56 @@ def DeleteApplicationProduct(request, pk):
             return Response("Заявка не найдена", status=404)
     except Products.DoesNotExist:
         return Response("Такого продукта нет", status=400)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Класс, описывающий методы работы с пользователями
+    Осуществляет связь с таблицей пользователей в базе данных
+    """
+
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    model_class = CustomUser
+
+    def create(self, request):
+        """
+        Функция регистрации новых пользователей
+        Если пользователя c указанным в request email ещё нет, в БД будет добавлен новый пользователь.
+        """
+        if self.model_class.objects.filter(email=request.data["email"]).exists():
+            return Response({"status": "Exist"}, status=400)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            print(serializer.data)
+            self.model_class.objects.create_user(
+                email=serializer.data["email"],
+                password=serializer.data["password"],
+                is_superuser=serializer.data["is_superuser"],
+                is_staff=serializer.data["is_staff"],
+            )
+            return Response({"status": "Success"}, status=200)
+        return Response(
+            {"status": "Error", "error": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@permission_classes([AllowAny])
+@authentication_classes([])
+@csrf_exempt
+@swagger_auto_schema(method="post", request_body=UserSerializer)
+@api_view(["Post"])
+def login_view(request):
+    email = request.POST["email"]  # допустим передали username и password
+    password = request.POST["password"]
+    user = authenticate(request, email=email, password=password)
+    if user is not None:
+        login(request, user)
+        return HttpResponse("{'status': 'ok'}")
+    else:
+        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+
+
+def logout_view(request):
+    logout(request._request)
+    return Response({"status": "Success"})

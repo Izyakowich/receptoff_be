@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "drf_yasg",
     "rest_framework",
     "recepies",
 ]
@@ -69,6 +70,13 @@ TEMPLATES = [
     },
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ]
+}
+
 WSGI_APPLICATION = "lab3.wsgi.application"
 
 
@@ -84,7 +92,7 @@ WSGI_APPLICATION = "lab3.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "recepies4",
+        "NAME": "recepies5",
         "USER": "postgres",
         "PASSWORD": "1234567890",
         "HOST": "localhost",
@@ -124,6 +132,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+AUTH_USER_MODEL = "recepies.CustomUser"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

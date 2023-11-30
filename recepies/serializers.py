@@ -10,6 +10,13 @@ class ProductSerializer(serializers.ModelSerializer):
         # Поля, которые мы сериализуем
         fields = "__all__"
 
+        def get_fields(self):
+            new_fields = OrderedDict()
+            for name, field in super().get_fields().items():
+                field.required = False
+                new_fields[name] = field
+            return new_fields
+
 
 class ApplicationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,3 +40,12 @@ class ApplicationProductstSerializer(serializers.ModelSerializer):
         model = ApplicationProducts
         # Поля, которые мы сериализуем
         fields = "__all__"
+
+
+class UserSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
+
+    class Meta:
+        model = CustomUser
+        fields = ["email", "password", "is_staff", "is_superuser"]
