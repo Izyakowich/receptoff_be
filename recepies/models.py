@@ -20,7 +20,7 @@ class NewUserManager(UserManager):
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(("email адрес"), unique=True)
-    password = models.CharField(max_length=50, verbose_name="Пароль")
+    password = models.CharField(max_length=200, verbose_name="Пароль")
     is_staff = models.BooleanField(
         default=False, verbose_name="Является ли пользователь менеджером?"
     )
@@ -63,10 +63,10 @@ class Application(models.Model):
 
 
 class ApplicationProducts(models.Model):
-    application = models.OneToOneField(
-        Application, models.DO_NOTHING, primary_key=True
-    )  # The composite primary key (application_id, products_id) found, that is not supported. The first column is selected.
-    products = models.ForeignKey("Products", models.DO_NOTHING)
+    application = models.ForeignKey(
+        "Application", models.DO_NOTHING, db_column="application_id"
+    )
+    products = models.ForeignKey("Products", models.DO_NOTHING, db_column="products_id")
 
     class Meta:
         managed = True

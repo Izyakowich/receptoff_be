@@ -69,9 +69,7 @@ urlpatterns = [
         views.putApplicationByAdmin,
         name="application_by_admin",
     ),
-    path(
-        "applications/userput", views.putApplicationByUser, name="application_by_user"
-    ),
+    path("applications/send", views.send_application, name="application_by_user"),
     path(
         "application_product/<int:pk>/put",
         views.PutApplicationProduct,
@@ -90,4 +88,5 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     path("login", views.login_view, name="login"),
     path("logout", views.logout_view, name="logout"),
+    path("user_info", views.user_info, name="user_info"),
 ]
