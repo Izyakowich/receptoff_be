@@ -37,8 +37,8 @@ class CurrentUserSingleton:
     @classmethod
     def _get_user(cls):
         return CustomUser.objects.get(
-            email="test@mail.ru",
-            password="pbkdf2_sha256$600000$XSTLkhrF5RCs15DeDxJL4v$z+fHYxk0pt9Ez6kyr1JKUb2/XZD14EEn6fm4QKLL1vQ=",
+            email="check@list.ru",
+            password="pbkdf2_sha256$600000$XjFy1vVc2KoGlNI6tDpWVb$r7ahJQyjwhRmtacF8Td2+FubN6Ny3wLwuqgnvqT6kYg=",
         )
 
 
@@ -226,9 +226,10 @@ def getApplications(request):
             ~Q(status="Удалено"), creation_date__range=(start, end)
         )
     else:  # Авторизованный пользователь может смотреть только свои заявки
+        print("user")
         applications = Application.objects.filter(
             ~Q(status="Удалено"),
-            creator=current_user.id,
+            id_user=current_user.id,
             creation_date__range=(start, end),
         )
 
@@ -252,25 +253,25 @@ def getApplication(request, pk):
         return Response("Сессия не найдена")
 
     try:
-        application = Application.ofbjects.get(pk=pk)
+        application = Application.objects.get(pk=pk)
         if application.status == "Удалено" or not application:
             return Response("Заявки с таким id нет")
-
         application_serializer = ApplicationSerializer(application)
+
         if (
             not current_user.is_superuser
-            and current_user.id == application_serializer.data["creator"]
+            and current_user.id == application_serializer.data["id_user"]
         ) or (current_user.is_superuser):
             application_products = ApplicationProducts.objects.filter(
                 application=application
             )
-            product_ids = [product.id_product_id for product in application_products]
+            product_ids = [product.id for product in application_products]
             print(product_ids)
             products_queryset = Products.objects.filter(id__in=product_ids)
             products_serializer = ProductSerializer(products_queryset, many=True)
             response_data = {
                 "application": application_serializer.data,
-                "products": products_serializer.data,
+                "product": products_serializer.data,
             }
             return Response(response_data)
         else:
@@ -422,7 +423,7 @@ def PutApplicationProduct(request, pk):
 
 @api_view(["PUT"])
 @permission_classes([IsAuth])
-def send_application(request):
+def sendApplication(request):
     ssid = request.COOKIES["session_id"]
     try:
         email = session_storage.get(ssid).decode("utf-8")

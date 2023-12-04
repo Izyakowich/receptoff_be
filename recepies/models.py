@@ -48,13 +48,20 @@ class Application(models.Model):
     approving_date = models.DateField(blank=True, null=True)
     publication_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=32, blank=True, null=True, choices=Status)
-    creator = models.ForeignKey("Users", models.DO_NOTHING, blank=True, null=True)
-    moderator = models.ForeignKey(
-        "Users",
-        models.DO_NOTHING,
-        related_name="application_moderator_set",
+
+    id_moderator = models.ForeignKey(
+        "CustomUser",
+        on_delete=models.CASCADE,
+        db_column="id_moderator",
+        related_name="moderator_application",
         blank=True,
         null=True,
+    )
+    id_user = models.ForeignKey(
+        "CustomUser",
+        on_delete=models.CASCADE,
+        db_column="id_user",
+        related_name="user_application",
     )
 
     class Meta:
@@ -87,14 +94,3 @@ class Products(models.Model):
     class Meta:
         managed = True
         db_table = "products"
-
-
-class Users(models.Model):
-    user_name = models.CharField(max_length=64, blank=True, null=True)
-    login = models.CharField(max_length=20, blank=True, null=True)
-    password = models.CharField(max_length=20, blank=True, null=True)
-    is_admin = models.BooleanField(blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = "users"

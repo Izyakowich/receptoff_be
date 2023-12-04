@@ -26,14 +26,6 @@ class ApplicationSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class UsersSerializer(serializers.ModelSerializer):
-    class Meta:
-        # Модель, которую мы сериализуем
-        model = Users
-        # Поля, которые мы сериализуем
-        fields = "__all__"
-
-
 class ApplicationProductstSerializer(serializers.ModelSerializer):
     class Meta:
         # Модель, которую мы сериализуем
