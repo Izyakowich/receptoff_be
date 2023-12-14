@@ -24,11 +24,11 @@ router = routers.DefaultRouter()
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.GetProducts),
-    path("product/<int:id>/", views.GetProduct, name="product_url"),
-    path("delete", views.DeleteProduct),
+    # path("product/<int:id>/", views.GetProduct, name="product_url"),
+    # path("delete", views.DeleteProduct),
     path("", include(router.urls)),
-    path("products/", views.GetProducts, name="products-list"),
-    path("products/<int:pk>", views.GetProductsById, name="get-product-by-id"),
+    # path("products/", views.GetProducts, name="products-list"),
+    path("product/<int:pk>", views.GetProductsById, name="get-product-by-id"),
     path("products/<int:pk>/delete", views.deleteProduct, name="delete-product"),
     path(
         "products/<int:pk>/post",

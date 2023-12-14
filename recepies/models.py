@@ -47,6 +47,7 @@ class Products(models.Model):
     ]
     product_name = models.CharField(max_length=64, blank=True, null=True)
     product_info = models.CharField(max_length=256, blank=True, null=True)
+    price = models.IntegerField(default=0)
     status = models.CharField(max_length=32, blank=True, null=True, choices=Status)
     photo = models.CharField(max_length=256, blank=True, null=True)
 

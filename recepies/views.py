@@ -26,7 +26,7 @@ class CurrentUserSingleton:
 
 
 @api_view(["GET"])
-def GetProductss(request, format=None):
+def GetProducts(request, format=None):
     """
     Возвращает список объектов
     """
@@ -34,6 +34,40 @@ def GetProductss(request, format=None):
     product = Products.objects.all()
     serializer = ProductSerializer(product, many=True)
     return Response(serializer.data)
+    # product_name = request.query_params.get("product_name", None)
+    # if product_name is not None:
+    #     products = Products.objects.filter(title__icontains=product_name)
+    # else:
+    #     products = Products.objects.all()
+    # serializer = ProductSerializer(products, many=True)
+    # return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def GetProductss(request):
+    product_name = request.query_params.get("product_name")
+
+    products = Products.objects.filter(status="enabled")
+
+    if title:
+        products = products.filter(title__icontains=product_name)
+
+    try:
+        current_user = CurrentUserSingleton.get_instance()
+        application = Application.objects.filter(
+            id_user=current_user, status="Зарегистрирован"
+        ).latest("creation_date")
+        serializer = ProductSerializer(products, many=True)
+        application_serializer = ApplicationSerializer(application)
+        result = {
+            "application_id": application_serializer.data["id"],
+            "product": serializer.data,
+        }
+        return Response(result)
+    except:
+        serializer = ProductSerializer(products, many=True)
+        result = serializer.data
+        return Response(result)
 
 
 @api_view(["GET"])
@@ -67,7 +101,7 @@ def PostProduct(request):
         client.fput_object(
             bucket_name="products", object_name=img_obj_name, file_path=file_path
         )
-        new_option.photo = f"minio://localhost:9000/products/{img_obj_name}"
+        new_option.photo = f"http//localhost:9000/products/{img_obj_name}"
         new_option.save()
     except Exception as e:
         return Response({"error": str(e)})
