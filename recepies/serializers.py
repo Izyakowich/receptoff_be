@@ -10,12 +10,12 @@ class ProductSerializer(serializers.ModelSerializer):
         # Поля, которые мы сериализуем
         fields = "__all__"
 
-        def get_fields(self):
-            new_fields = OrderedDict()
-            for name, field in super().get_fields().items():
-                field.required = False
-                new_fields[name] = field
-            return new_fields
+        # def get_fields(self):
+        #     new_fields = OrderedDict()
+        #     for name, field in super().get_fields().items():
+        #         field.required = False
+        #         new_fields[name] = field
+        #     return new_fields
 
 
 class ApplicationSerializer(serializers.ModelSerializer):

@@ -60,7 +60,7 @@ def GetProducts(request, format=None):
             id_user=current_user, status="Зарегистрирован"
         ).latest("creation_date")
         serializer = ProductSerializer(products, many=True)
-        application_serializer = ProductSerializer(application)
+        application_serializer = ProductSerializer(product)
         result = {
             "application_id": application_serializer.data["id"],
             "products": serializer.data,
@@ -170,7 +170,7 @@ def PostProductToApplication(request, pk):
     # return Response(serializer.data)
 
     addedProduct = Products.objects.get(pk=pk)
-    serializer = SubscriptionSerializer(addedProduct)
+    serializer = ProductSerializer(addedProduct)
     return Response(serializer.data)
 
 
@@ -202,16 +202,48 @@ def deleteProduct(request, pk):
     return Response(serializer.data)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuth])
-def getApplications(request):
-    ssid = request.COOKIES["session_id"]
-    try:
-        email = session_storage.get(ssid).decode("utf-8")
-        current_user = CustomUser.objects.get(email=email)
-    except:
-        return Response("Сессия не найдена")
+# @api_view(["GET"])
+# @permission_classes([IsAuth])
+# def getApplications(request):
+#     ssid = request.COOKIES["session_id"]
+#     try:
+#         email = session_storage.get(ssid).decode("utf-8")
+#         current_user = CustomUser.objects.get(email=email)
+#     except:
+#         return Response("Сессия не найдена")
 
+#     date_format = "%Y-%m-%d"
+#     start_date_str = request.query_params.get("start", "2023-01-01")
+#     end_date_str = request.query_params.get("end", "2023-12-31")
+#     start = datetime.strptime(start_date_str, date_format).date()
+#     end = datetime.strptime(end_date_str, date_format).date()
+
+#     status = request.data.get("status")
+
+#     if current_user.is_superuser:  # Модератор может смотреть заявки всех пользователей
+#         print("модератор")
+#         applications = Application.objects.filter(
+#             ~Q(status="Удалено"), creation_date__range=(start, end)
+#         )
+#     else:  # Авторизованный пользователь может смотреть только свои заявки
+#         print("user")
+#         applications = Application.objects.filter(
+#             ~Q(status="Удалено"),
+#             id_user=current_user.id,
+#             creation_date__range=(start, end),
+#         )
+
+#     if status:
+#         applications = applications.filter(status=status)
+
+#     applications = applications.order_by("creation_date")
+#     serializer = ApplicationSerializer(applications, many=True)
+
+#     return Response(serializer.data)
+
+
+@api_view(["GET"])
+def getApplications(request):
     date_format = "%Y-%m-%d"
     start_date_str = request.query_params.get("start", "2023-01-01")
     end_date_str = request.query_params.get("end", "2023-12-31")
@@ -220,18 +252,9 @@ def getApplications(request):
 
     status = request.data.get("status")
 
-    if current_user.is_superuser:  # Модератор может смотреть заявки всех пользователей
-        print("модератор")
-        applications = Application.objects.filter(
-            ~Q(status="Удалено"), creation_date__range=(start, end)
-        )
-    else:  # Авторизованный пользователь может смотреть только свои заявки
-        print("user")
-        applications = Application.objects.filter(
-            ~Q(status="Удалено"),
-            id_user=current_user.id,
-            creation_date__range=(start, end),
-        )
+    applications = Application.objects.filter(
+        ~Q(status="Удалено"), creation_date__range=(start, end)
+    )
 
     if status:
         applications = applications.filter(status=status)
@@ -636,3 +659,72 @@ def user_info(request):
             return Response({"status": "Error", "message": "Session does not exist"})
     except:
         return Response({"status": "Error", "message": "Cookies are not transmitted"})
+
+
+@api_view(["PUT"])
+def putAsync(request, format=None):
+    expected_token = "8c2a9d5c-1f6b-48c6-b953-0e8a3e5d9a1f"
+
+    # Проверка метода запроса (должен быть PUT)
+    if request.method != "PUT":
+        return Response(
+            {"error": "Метод не разрешен"}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    prod_id = request.data.get("id")
+    result = request.data.get("result")
+    # token = request.data.get('token')
+
+    # Проверка наличия всех необходимых параметров
+    if not prod_id or not result:
+        return Response(
+            {"error": "Отсутствуют необходимые данные"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        prod = Application.objects.get(application_id=prod_id)
+    except Application.DoesNotExist:
+        return Response(
+            {"error": "Заявка не найдена"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    prod.status = result
+    prod.save()
+    serializer = ApplicationSerializer(prod)
+    print(serializer.data)
+    return Response(serializer.data)
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+import json
+
+SECRET_KEY = "aB3dE4gH"
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def UpdateRequest(request, pk):
+    # Проверка ключа авторизации
+    data = json.loads(request.body)
+    print(data)
+    secret_key = data.get("secretKey")
+    if secret_key != SECRET_KEY:
+        return JsonResponse({"message": "Неавторизованный запрос"}, status=401)
+
+    try:
+        result = data["result"]
+        # Обновление статуса заявки
+        application = Application.objects.get(pk=pk)
+        application.paid_status = result
+        application.save()
+        return JsonResponse({"message": "Статус заявки обновлён"}, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"message": "Неверный формат данных"}, status=400)
+    except Application.DoesNotExist:
+        return JsonResponse({"message": "Заявка не найдена"}, status=404)
+    except Exception as e:
+        return JsonResponse({"message": str(e)}, status=500)
