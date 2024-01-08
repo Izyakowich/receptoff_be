@@ -21,6 +21,7 @@ from django.conf import settings
 import redis
 import uuid
 from django.contrib.sessions.models import Session
+from django.http import HttpResponseBadRequest, HttpResponseServerError
 
 session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
@@ -142,7 +143,7 @@ def PostProductToApplication(request, pk):
         application = Application(
             status="Зарегистрирован",
             creation_date=datetime.now(),
-            user_id=current_user,
+            id_user=current_user,
         )
         application.save()
     application_id = application
@@ -151,14 +152,18 @@ def PostProductToApplication(request, pk):
     except Products.DoesNotExist:
         return Response("Такого продукта нет", status=400)
     try:
+        print(application)
+        print(product)
         application_product = ApplicationProducts.objects.get(
-            application_id=application_id, product_id=product
+            application_id=application.id, products_id=product.id
         )
-        return Response("Такой рецепт уже добавлен в заявку")
+        print("123")
+        return HttpResponseBadRequest("Invalid data.")
+
     except ApplicationProducts.DoesNotExist:
         application_product = ApplicationProducts(
-            application_id=application_id,
-            product_id=product,
+            application_id=application.id,
+            products_id=product.id,
         )
         application_product.save()
     # application_subscription = ApplicationProducts.objects.filter(
@@ -168,7 +173,7 @@ def PostProductToApplication(request, pk):
     # # applications = Application.objects.all()
     # # serializer = ApplicationSerializer(applications, many=True)
     # return Response(serializer.data)
-
+    print("345678")
     addedProduct = Products.objects.get(pk=pk)
     serializer = ProductSerializer(addedProduct)
     return Response(serializer.data)
@@ -202,59 +207,36 @@ def deleteProduct(request, pk):
     return Response(serializer.data)
 
 
-# @api_view(["GET"])
-# @permission_classes([IsAuth])
-# def getApplications(request):
-#     ssid = request.COOKIES["session_id"]
-#     try:
-#         email = session_storage.get(ssid).decode("utf-8")
-#         current_user = CustomUser.objects.get(email=email)
-#     except:
-#         return Response("Сессия не найдена")
-
-#     date_format = "%Y-%m-%d"
-#     start_date_str = request.query_params.get("start", "2023-01-01")
-#     end_date_str = request.query_params.get("end", "2023-12-31")
-#     start = datetime.strptime(start_date_str, date_format).date()
-#     end = datetime.strptime(end_date_str, date_format).date()
-
-#     status = request.data.get("status")
-
-#     if current_user.is_superuser:  # Модератор может смотреть заявки всех пользователей
-#         print("модератор")
-#         applications = Application.objects.filter(
-#             ~Q(status="Удалено"), creation_date__range=(start, end)
-#         )
-#     else:  # Авторизованный пользователь может смотреть только свои заявки
-#         print("user")
-#         applications = Application.objects.filter(
-#             ~Q(status="Удалено"),
-#             id_user=current_user.id,
-#             creation_date__range=(start, end),
-#         )
-
-#     if status:
-#         applications = applications.filter(status=status)
-
-#     applications = applications.order_by("creation_date")
-#     serializer = ApplicationSerializer(applications, many=True)
-
-#     return Response(serializer.data)
-
-
 @api_view(["GET"])
+@permission_classes([IsAuth])
 def getApplications(request):
+    ssid = request.COOKIES["session_id"]
+    try:
+        email = session_storage.get(ssid).decode("utf-8")
+        current_user = CustomUser.objects.get(email=email)
+    except:
+        return Response("Сессия не найдена")
+
     date_format = "%Y-%m-%d"
     start_date_str = request.query_params.get("start", "2023-01-01")
-    end_date_str = request.query_params.get("end", "2023-12-31")
+    end_date_str = request.query_params.get("end", "2024-12-31")
     start = datetime.strptime(start_date_str, date_format).date()
     end = datetime.strptime(end_date_str, date_format).date()
 
     status = request.data.get("status")
 
-    applications = Application.objects.filter(
-        ~Q(status="Удалено"), creation_date__range=(start, end)
-    )
+    if current_user.is_superuser:  # Модератор может смотреть заявки всех пользователей
+        print("модератор")
+        applications = Application.objects.filter(
+            ~Q(status="Удалено"), creation_date__range=(start, end)
+        )
+    else:  # Авторизованный пользователь может смотреть только свои заявки
+        print("user")
+        applications = Application.objects.filter(
+            ~Q(status="Удалено"),
+            id_user=current_user.id,
+            creation_date__range=(start, end),
+        )
 
     if status:
         applications = applications.filter(status=status)
@@ -263,6 +245,29 @@ def getApplications(request):
     serializer = ApplicationSerializer(applications, many=True)
 
     return Response(serializer.data)
+
+
+# @api_view(["GET"])
+# def getApplications(request):
+#     date_format = "%Y-%m-%d"
+#     start_date_str = request.query_params.get("start", "2023-01-01")
+#     end_date_str = request.query_params.get("end", "2023-12-31")
+#     start = datetime.strptime(start_date_str, date_format).date()
+#     end = datetime.strptime(end_date_str, date_format).date()
+
+#     status = request.data.get("status")
+
+#     applications = Application.objects.filter(
+#         ~Q(status="Удалено"), creation_date__range=(start, end)
+#     )
+
+#     if status:
+#         applications = applications.filter(status=status)
+
+#     applications = applications.order_by("creation_date")
+#     serializer = ApplicationSerializer(applications, many=True)
+
+#     return Response(serializer.data)
 
 
 @api_view(["GET"])
@@ -376,17 +381,22 @@ def putApplicationByAdmin(request, pk):
         return Response("Сессия не найдена")
 
     if not Application.objects.filter(pk=pk).exists():
+        print("1")
         return Response(f"Заявки с таким id нет")
     application = Application.objects.get(pk=pk)
     if application.status != "Проверяется":
+        print("2")
         return Response("Такой заявки нет на проверке")
     if request.data["status"] not in ["Отказано", "Принято"]:
+        print("3")
         return Response("Неверный статус!")
     application.status = request.data["status"]
     application.publication_date = datetime.now().date()
+    application.approving_date = datetime.now().date()
     application.id_moderator = current_user
     application.save()
     serializer = ApplicationSerializer(application)
+    print("4")
     return Response(serializer.data)
 
 
@@ -444,27 +454,45 @@ def PutApplicationProduct(request, pk):
         return Response("Заявка не найдена", status=404)
 
 
+# import requests
+
+
+# def calculate_delivery_date(order_id):
+#     data = {
+#         "order_id": order_id,
+#         # "access_token": settings.REMOTE_WEB_SERVICE_AUTH_TOKEN,
+#     }
+
+#     requests.post("http://127.0.0.1:8080/calc_delivery_date/", json=data, timeout=3)
+
+
 @api_view(["PUT"])
 @permission_classes([IsAuth])
 def sendApplication(request):
     ssid = request.COOKIES["session_id"]
+    print(ssid)
     try:
         email = session_storage.get(ssid).decode("utf-8")
         current_user = CustomUser.objects.get(email=email)
+        print("1")
     except:
+        print("2")
         return Response("Сессия не найдена")
 
     try:
         application = get_object_or_404(
             Application, id_user=current_user, status="Зарегистрирован"
         )
+        print("3")
     except:
+        print("4")
         return Response("Такой заявки не зарегистрировано")
 
     application.status = "Проверяется"
     application.publication_date = datetime.now().date()
     application.save()
     serializer = ApplicationSerializer(application)
+    print("ok")
     return Response(serializer.data)
 
 
@@ -631,6 +659,7 @@ def login_view(request):
 @permission_classes([IsAuth])
 def logout_view(request):
     ssid = request.COOKIES["session_id"]
+    print(ssid)
     if session_storage.exists(ssid):
         session_storage.delete(ssid)
         response_data = {"status": "Success"}
@@ -644,14 +673,16 @@ def logout_view(request):
 def user_info(request):
     try:
         ssid = request.COOKIES["session_id"]
+        print(ssid)
         if session_storage.exists(ssid):
             email = session_storage.get(ssid).decode("utf-8")
             user = CustomUser.objects.get(email=email)
+            print(user)
             user_data = {
                 "user_id": user.id,
                 "email": user.email,
-                "full_name": user.full_name,
-                "phone_number": user.phone_number,
+                # "full_name": user.full_name,
+                # "phone_number": user.phone_number,
                 "is_superuser": user.is_superuser,
             }
             return Response(user_data, status=status.HTTP_200_OK)
@@ -718,7 +749,7 @@ def UpdateRequest(request, pk):
         result = data["result"]
         # Обновление статуса заявки
         application = Application.objects.get(pk=pk)
-        application.paid_status = result
+        application.ready_status = result
         application.save()
         return JsonResponse({"message": "Статус заявки обновлён"}, status=200)
 

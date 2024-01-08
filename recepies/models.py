@@ -48,7 +48,7 @@ class Application(models.Model):
     approving_date = models.DateField(blank=True, null=True)
     publication_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=32, blank=True, null=True, choices=Status)
-    paid_status = models.BooleanField(default=False, null=True)
+    ready_status = models.BooleanField(default=False, null=True)
 
     id_moderator = models.ForeignKey(
         "CustomUser",

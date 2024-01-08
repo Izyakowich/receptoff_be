@@ -19,11 +19,20 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
+    user_email = serializers.StringRelatedField(source="id_user.email")
+    moderator_email = serializers.StringRelatedField(source="id_moderator.email")
+
     class Meta:
         # Модель, которую мы сериализуем
         model = Application
         # Поля, которые мы сериализуем
         fields = "__all__"
+
+    # def to_representation(self, instance):
+    #     representation = super().to_representation(instance)
+    #     status_mapping = {v[0]: v[1] for v in Application.Status}
+    #     representation["status"] = status_mapping[representation["status"]]
+    #     return representation
 
 
 class ApplicationProductstSerializer(serializers.ModelSerializer):

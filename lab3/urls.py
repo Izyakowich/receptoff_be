@@ -87,7 +87,7 @@ urlpatterns = [
     ),
     path("auth/api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     path("login", views.login_view, name="login"),
-    path("logout", views.logout_view, name="logout"),
+    path("logout/", views.logout_view, name="logout"),
     path("user_info", views.user_info, name="user_info"),
     path("update/<int:pk>/", views.UpdateRequest, name="async"),
 ]
