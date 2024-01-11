@@ -46,13 +46,15 @@ class CurrentUserSingleton:
 @api_view(["GET"])
 def GetProducts(request, format=None):
     # print("get")
-    # product = Products.objects.all()
+    # products = Products.objects.all()
     # serializer = ProductSerializer(product, many=True)
     # return Response(serializer.data)
+
+    title = request.query_params.get("title")
     products = Products.objects.filter(status="enabled")
 
-    # if product_name:
-    #     products = products.filter(title__icontains=product_name)
+    if title:
+        products = products.filter(product_name__icontains=title)
     try:
         ssid = request.COOKIES["session_id"]
         email = session_storage.get(ssid).decode("utf-8")
@@ -71,6 +73,25 @@ def GetProducts(request, format=None):
         serializer = ProductSerializer(products, many=True)
         result = {"products": serializer.data}
         return Response(result)
+    # search_query = request.GET.get("search", "")
+
+    # products = Products.objects.filter(product_name__icontains=search_query)
+
+    # serializer = ProductSerializer(products, many=True)
+
+    # application = Application.objects.filter(status=1).first()
+    # if application:
+    #     application_serializer = ApplicationSerializer(application)
+    #     apps_data = [application_serializer.data]
+    # else:
+    #     apps_data = []
+
+    # response_data = {
+    #     "applications": apps_data,
+    #     "products": serializer.data,
+    # }
+
+    # return Response(response_data)
 
 
 @api_view(["GET"])
@@ -89,7 +110,7 @@ def GetProductsById(request, pk):
 def PostProduct(request):
     data = request.data.copy()  # Создаем копию данных запроса
     data["status"] = "enabled"  # Устанавливаем значение "enabled" для поля "status"
-
+    print(data)
     serializer = ProductSerializer(data=data)
     if serializer.is_valid():
         new_option = serializer.save()
@@ -223,15 +244,13 @@ def getApplications(request):
     start = datetime.strptime(start_date_str, date_format).date()
     end = datetime.strptime(end_date_str, date_format).date()
 
-    status = request.data.get("status")
-
-    if current_user.is_superuser:  # Модератор может смотреть заявки всех пользователей
-        print("модератор")
+    status = request.query_params.get("status")
+    print(status)
+    if current_user.is_superuser:
         applications = Application.objects.filter(
             ~Q(status="Удалено"), creation_date__range=(start, end)
         )
-    else:  # Авторизованный пользователь может смотреть только свои заявки
-        print("user")
+    else:
         applications = Application.objects.filter(
             ~Q(status="Удалено"),
             id_user=current_user.id,
@@ -285,7 +304,6 @@ def getApplication(request, pk):
         if application.status == "Удалено" or not application:
             return Response("Заявки с таким id нет")
         application_serializer = ApplicationSerializer(application)
-
         if (
             not current_user.is_superuser
             and current_user.id == application_serializer.data["id_user"]
@@ -293,7 +311,7 @@ def getApplication(request, pk):
             application_products = ApplicationProducts.objects.filter(
                 application=application
             )
-            product_ids = [product.id for product in application_products]
+            product_ids = [product.products.id for product in application_products]
             print(product_ids)
             products_queryset = Products.objects.filter(id__in=product_ids)
             products_serializer = ProductSerializer(products_queryset, many=True)
@@ -301,6 +319,7 @@ def getApplication(request, pk):
                 "application": application_serializer.data,
                 "product": products_serializer.data,
             }
+            print(response_data)
             return Response(response_data)
         else:
             return Response("Заявки с таким id нет")
