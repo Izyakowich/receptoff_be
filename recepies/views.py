@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from .serializers import *
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import MultiPartParser
 from datetime import datetime
 from django.db.models import Q
 from minio import Minio
@@ -113,23 +114,23 @@ def PostProduct(request):
     print(data)
     serializer = ProductSerializer(data=data)
     if serializer.is_valid():
-        new_option = serializer.save()
-        client = Minio(
-            endpoint="localhost:9000",
-            access_key="minioadmin",
-            secret_key="minioadmin",
-            secure=False,
-        )
-        i = new_option.id - 1
-        try:
-            i = new_option.product_name
-            img_obj_name = f"{i}.jpeg"
-            file_path = f"photos/{request.data.get('photo')}"
-            client.fput_object(
-                bucket_name="products", object_name=img_obj_name, file_path=file_path
-            )
-            new_option.photo = f"minio://localhost:9000/products/{img_obj_name}"
-            new_option.save()
+        # new_option = serializer.save()
+        # client = Minio(
+        #     endpoint="localhost:9000",
+        #     access_key="minioadmin",
+        #     secret_key="minioadmin",
+        #     secure=False,
+        # )
+        # i = new_option.id - 1
+        # try:
+        #     i = new_option.product_name
+        #     img_obj_name = f"{i}.jpeg"
+        #     file_path = f"photos/{request.data.get('photo')}"
+        #     client.fput_object(
+        #         bucket_name="products", object_name=img_obj_name, file_path=file_path
+        #     )
+        #     new_option.photo = f"minio://localhost:9000/products/{img_obj_name}/"
+        serializer.save()
         # try:
         #     i = new_option.id
         #     img_obj_name = f"{i}.jpg"
@@ -139,10 +140,54 @@ def PostProduct(request):
         #                     # file_path=file_path)
         #     new_option.src = f"localhost:9000/images/{img_obj_name}"
         #     new_option.save()
-        except Exception as e:
-            return Response({"error": str(e)})
+        # except Exception as e:
+        #     return Response({"error": str(e)})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@parser_classes([MultiPartParser])
+@permission_classes([IsManager])
+def postImageToProduct(request, pk):
+    if "file" in request.FILES:
+        file = request.FILES["file"]
+        product = Products.objects.get(pk=pk, status="enabled")
+
+        client = Minio(
+            endpoint="localhost:9000",
+            access_key="minioadmin",
+            secret_key="minioadmin",
+            secure=False,
+        )
+
+        bucket_name = "products"
+        file_name = file.name
+        file_path = "http://localhost:9000/products/" + file_name
+
+        try:
+            client.put_object(
+                bucket_name,
+                file_name,
+                file,
+                length=file.size,
+                content_type=file.content_type,
+            )
+            print("Файл успешно загружен в Minio.")
+
+            serializer = ProductSerializer(
+                instance=product, data={"photo": file_path}, partial=True
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return HttpResponse(file_path)
+            else:
+                return HttpResponseBadRequest("Invalid data.")
+        except Exception as e:
+            print("Ошибка при загрузке файла в Minio:", str(e))
+            return HttpResponseServerError("An error occurred during file upload.")
+
+    return HttpResponseBadRequest("Invalid request.")
 
 
 # @swagger_auto_schema(method="post", request_body=ProductSerializer)

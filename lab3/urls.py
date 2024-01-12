@@ -56,6 +56,7 @@ urlpatterns = [
     ),
     path("products/<int:pk>/put/", views.putProducts, name="put-product"),
     path("products/post/", views.PostProduct, name="post-product"),
+    path("products/<int:pk>/image/post/", views.postImageToProduct, name="post-image"),
     path("applications/", views.getApplications, name="applications-list"),
     path("applications/<int:pk>/", views.getApplication, name="application"),
     path(
