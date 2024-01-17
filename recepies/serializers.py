@@ -19,14 +19,28 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
-    user_email = serializers.StringRelatedField(source="id_user.email")
-    moderator_email = serializers.StringRelatedField(source="id_moderator.email")
+    # user_email = serializers.StringRelatedField(source="id_user.email")
+    # moderator_email = serializers.StringRelatedField(source="id_moderator.email")
+    user_email = serializers.SerializerMethodField()
+    moderator_email = serializers.SerializerMethodField()
 
     class Meta:
         # Модель, которую мы сериализуем
         model = Application
         # Поля, которые мы сериализуем
         fields = "__all__"
+
+    def get_user_email(self, obj):
+        if obj.id_user:
+            return obj.id_user.email
+        else:
+            return None
+
+    def get_moderator_email(self, obj):
+        if obj.id_moderator:
+            return obj.id_moderator.email
+        else:
+            return None
 
     # def to_representation(self, instance):
     #     representation = super().to_representation(instance)

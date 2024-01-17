@@ -45,7 +45,7 @@ class CurrentUserSingleton:
 
 
 @api_view(["GET"])
-def GetProducts(request, format=None):
+def GetProducts(request):
     # print("get")
     # products = Products.objects.all()
     # serializer = ProductSerializer(product, many=True)
@@ -60,20 +60,37 @@ def GetProducts(request, format=None):
         ssid = request.COOKIES["session_id"]
         email = session_storage.get(ssid).decode("utf-8")
         current_user = CustomUser.objects.get(email=email)
-        product = Products.objects.filter(
+        application = Application.objects.get(
             id_user=current_user, status="Зарегистрирован"
-        ).latest("creation_date")
+        )
+        # .latest("creation_date")
         serializer = ProductSerializer(products, many=True)
-        application_serializer = ProductSerializer(product)
+        print("appicationnnnnnn", application)
+        application_serializer = ApplicationSerializer(application)
+        print("application_serializer", application_serializer)
+
         result = {
             "application_id": application_serializer.data["id"],
             "products": serializer.data,
         }
+        print("res", result)
         return Response(result)
     except:
+        print("2")
         serializer = ProductSerializer(products, many=True)
         result = {"products": serializer.data}
         return Response(result)
+        # serializer = ProductSerializer(products, many=True)
+        # print("appicationnnnnnn", application)
+        # application_serializer = ApplicationSerializer(application)
+        # print("application_serializer", application_serializer)
+
+        # result = {
+        #     "application_id": application_serializer.data["id"],
+        #     "products": serializer.data,
+        # }
+        # print("res", result)
+        # return Response(result)
     # search_query = request.GET.get("search", "")
 
     # products = Products.objects.filter(product_name__icontains=search_query)
@@ -202,9 +219,10 @@ def PostProductToApplication(request, pk):
         return Response("Сессия не найдена")
 
     try:
-        application = Application.objects.filter(
+        application = Application.objects.get(
             id_user=current_user, status="Зарегистрирован"
-        ).latest("creation_date")
+        )
+        # .latest("creation_date")
     except:
         application = Application(
             status="Зарегистрирован",
@@ -387,7 +405,7 @@ def getApplication(request, pk):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuth])
-def deleteApplication(request, pk):
+def deleteApplication(request):
     ssid = request.COOKIES["session_id"]
     try:
         email = session_storage.get(ssid).decode("utf-8")
@@ -404,15 +422,6 @@ def deleteApplication(request, pk):
         return Response({"status": "Success"})
     except:
         return Response("У данного пользователя нет заявки", status=400)
-    # if not Application.objects.filter(pk=pk).exists():
-    #     return Response(f"Заявки с таким id нет")
-    # application = Application.objects.get(pk=pk)
-    # application.status = "Удалено"
-    # application.save()
-
-    # application = Application.objects.all()
-    # serializer = ApplicationSerializer(application, many=True)
-    # return Response(serializer.data)
 
 
 # @swagger_auto_schema(method="put", request_body=ApplicationSerializer)
@@ -445,22 +454,21 @@ def putApplicationByAdmin(request, pk):
         return Response("Сессия не найдена")
 
     if not Application.objects.filter(pk=pk).exists():
-        print("1")
         return Response(f"Заявки с таким id нет")
     application = Application.objects.get(pk=pk)
+
     if application.status != "Проверяется":
-        print("2")
         return Response("Такой заявки нет на проверке")
+
     if request.data["status"] not in ["Отказано", "Принято"]:
-        print("3")
         return Response("Неверный статус!")
+
     application.status = request.data["status"]
     application.publication_date = datetime.now().date()
     application.approving_date = datetime.now().date()
     application.id_moderator = current_user
     application.save()
     serializer = ApplicationSerializer(application)
-    print("4")
     return Response(serializer.data)
 
 
@@ -518,16 +526,7 @@ def PutApplicationProduct(request, pk):
         return Response("Заявка не найдена", status=404)
 
 
-# import requests
-
-
-# def calculate_delivery_date(order_id):
-#     data = {
-#         "order_id": order_id,
-#         # "access_token": settings.REMOTE_WEB_SERVICE_AUTH_TOKEN,
-#     }
-
-#     requests.post("http://127.0.0.1:8080/calc_delivery_date/", json=data, timeout=3)
+import requests
 
 
 @api_view(["PUT"])
@@ -538,18 +537,13 @@ def sendApplication(request):
     try:
         email = session_storage.get(ssid).decode("utf-8")
         current_user = CustomUser.objects.get(email=email)
-        print("1")
     except:
-        print("2")
         return Response("Сессия не найдена")
-
     try:
         application = get_object_or_404(
             Application, id_user=current_user, status="Зарегистрирован"
         )
-        print("3")
     except:
-        print("4")
         return Response("Такой заявки не зарегистрировано")
 
     application.status = "Проверяется"
@@ -557,7 +551,23 @@ def sendApplication(request):
     application.save()
     serializer = ApplicationSerializer(application)
     print("ok")
-    return Response(serializer.data)
+
+    external_service_url = "http://localhost:8080/asyncProcess"
+    payload = {"id": application.id}
+    try:
+        external_response = requests.post(external_service_url, json=payload)
+        external_response.raise_for_status()  # Raises an HTTPError if the HTTP request returned an unsuccessful status code
+    except requests.RequestException as e:
+        # Handle any errors that occur during the request
+        return Response(f"Ошибка при обращении к внешнему сервису: {str(e)}")
+
+    # If the external service call was successful, include its response
+    serializer = ApplicationSerializer(application)
+    data = serializer.data
+    data["external_service_response"] = external_response.json()
+    return Response(data)
+
+    # return Response(serializer.data)
 
 
 @api_view(["DELETE"])
