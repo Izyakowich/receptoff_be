@@ -80,36 +80,6 @@ def GetProducts(request):
         serializer = ProductSerializer(products, many=True)
         result = {"products": serializer.data}
         return Response(result)
-        # serializer = ProductSerializer(products, many=True)
-        # print("appicationnnnnnn", application)
-        # application_serializer = ApplicationSerializer(application)
-        # print("application_serializer", application_serializer)
-
-        # result = {
-        #     "application_id": application_serializer.data["id"],
-        #     "products": serializer.data,
-        # }
-        # print("res", result)
-        # return Response(result)
-    # search_query = request.GET.get("search", "")
-
-    # products = Products.objects.filter(product_name__icontains=search_query)
-
-    # serializer = ProductSerializer(products, many=True)
-
-    # application = Application.objects.filter(status=1).first()
-    # if application:
-    #     application_serializer = ApplicationSerializer(application)
-    #     apps_data = [application_serializer.data]
-    # else:
-    #     apps_data = []
-
-    # response_data = {
-    #     "applications": apps_data,
-    #     "products": serializer.data,
-    # }
-
-    # return Response(response_data)
 
 
 @api_view(["GET"])
@@ -131,34 +101,7 @@ def PostProduct(request):
     print(data)
     serializer = ProductSerializer(data=data)
     if serializer.is_valid():
-        # new_option = serializer.save()
-        # client = Minio(
-        #     endpoint="localhost:9000",
-        #     access_key="minioadmin",
-        #     secret_key="minioadmin",
-        #     secure=False,
-        # )
-        # i = new_option.id - 1
-        # try:
-        #     i = new_option.product_name
-        #     img_obj_name = f"{i}.jpeg"
-        #     file_path = f"photos/{request.data.get('photo')}"
-        #     client.fput_object(
-        #         bucket_name="products", object_name=img_obj_name, file_path=file_path
-        #     )
-        #     new_option.photo = f"minio://localhost:9000/products/{img_obj_name}/"
         serializer.save()
-        # try:
-        #     i = new_option.id
-        #     img_obj_name = f"{i}.jpg"
-        #     file_path = f"assets/{request.data.get('src')}"
-        #     client.fput_object(bucket_name='images',
-        #                     object_name=img_obj_name)
-        #                     # file_path=file_path)
-        #     new_option.src = f"localhost:9000/images/{img_obj_name}"
-        #     new_option.save()
-        # except Exception as e:
-        #     return Response({"error": str(e)})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -250,13 +193,6 @@ def PostProductToApplication(request, pk):
             products_id=product.id,
         )
         application_product.save()
-    # application_subscription = ApplicationProducts.objects.filter(
-    #     application_id=application_id
-    # )
-    # serializer = ApplicationProductstSerializer(application_product, many=True)
-    # # applications = Application.objects.all()
-    # # serializer = ApplicationSerializer(applications, many=True)
-    # return Response(serializer.data)
     print("345678")
     addedProduct = Products.objects.get(pk=pk)
     serializer = ProductSerializer(addedProduct)
@@ -329,29 +265,6 @@ def getApplications(request):
     return Response(serializer.data)
 
 
-# @api_view(["GET"])
-# def getApplications(request):
-#     date_format = "%Y-%m-%d"
-#     start_date_str = request.query_params.get("start", "2023-01-01")
-#     end_date_str = request.query_params.get("end", "2023-12-31")
-#     start = datetime.strptime(start_date_str, date_format).date()
-#     end = datetime.strptime(end_date_str, date_format).date()
-
-#     status = request.data.get("status")
-
-#     applications = Application.objects.filter(
-#         ~Q(status="Удалено"), creation_date__range=(start, end)
-#     )
-
-#     if status:
-#         applications = applications.filter(status=status)
-
-#     applications = applications.order_by("creation_date")
-#     serializer = ApplicationSerializer(applications, many=True)
-
-#     return Response(serializer.data)
-
-
 @api_view(["GET"])
 @permission_classes([IsAuth])
 def getApplication(request, pk):
@@ -386,19 +299,6 @@ def getApplication(request, pk):
             return Response(response_data)
         else:
             return Response("Заявки с таким id нет")
-        # application_products = ApplicationProducts.objects.filter(
-        #     application_id=application
-        # )
-        # application_products_serializer = ApplicationProductstSerializer(
-        #     application_products, many=True
-        # )
-
-        # response_data = {
-        #     "application": application_serializer.data,
-        #     "products": application_products_serializer.data,
-        # }
-
-        # return Response(response_data)
     except Application.DoesNotExist:
         return Response("Заявки с таким id нет")
 
@@ -556,12 +456,10 @@ def sendApplication(request):
     payload = {"id": application.id}
     try:
         external_response = requests.post(external_service_url, json=payload)
-        external_response.raise_for_status()  # Raises an HTTPError if the HTTP request returned an unsuccessful status code
+        external_response.raise_for_status()
     except requests.RequestException as e:
-        # Handle any errors that occur during the request
         return Response(f"Ошибка при обращении к внешнему сервису: {str(e)}")
 
-    # If the external service call was successful, include its response
     serializer = ApplicationSerializer(application)
     data = serializer.data
     data["external_service_response"] = external_response.json()
@@ -582,13 +480,7 @@ def DeleteApplicationProduct(request, pk):
     application = get_object_or_404(
         Application, id_user=current_user, status="Зарегистрирован"
     )
-    # try:
-    #     product = Products.objects.get(pk=pk, status="enabled")
-    #     try:
-    #         application_product = get_object_or_404(
-    #             ApplicationProducts, id_application=application, id_subscription=product
-    #         )
-    #         application_product.delete()
+
     try:
         product = Products.objects.get(pk=pk, status="enabled")
         application_from_product = ApplicationProducts.objects.filter(
@@ -611,51 +503,6 @@ def DeleteApplicationProduct(request, pk):
             return Response("Заявка не найдена", status=404)
     except Products.DoesNotExist:
         return Response("Такого продукта нет", status=400)
-
-
-# class UserViewSet(viewsets.ModelViewSet):
-#     queryset = CustomUser.objects.all()
-#     serializer_class = UserSerializer
-#     model_class = CustomUser
-
-#     def create(self, request):
-#         if self.model_class.objects.filter(email=request.data["email"]).exists():
-#             return Response({"status": "Exist"}, status=400)
-#         serializer = self.serializer_class(data=request.data)
-#         if serializer.is_valid():
-#             print(serializer.data)
-#             self.model_class.objects.create_user(
-#                 email=serializer.data["email"],
-#                 password=serializer.data["password"],
-#                 is_superuser=serializer.data["is_superuser"],
-#                 is_staff=serializer.data["is_staff"],
-#             )
-#             return Response({"status": "Success"}, status=200)
-#         return Response(
-#             {"status": "Error", "error": serializer.errors},
-#             status=status.HTTP_400_BAD_REQUEST,
-#         )
-
-
-# @permission_classes([AllowAny])
-# @authentication_classes([])
-# @csrf_exempt
-# @swagger_auto_schema(method="post", request_body=UserSerializer)
-# @api_view(["Post"])
-# def login_view(request):
-#     email = request.POST["email"]  # допустим передали username и password
-#     password = request.POST["password"]
-#     user = authenticate(request, email=email, password=password)
-#     if user is not None:
-#         login(request, user)
-#         return HttpResponse("{'status': 'ok'}")
-#     else:
-#         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
-
-
-# def logout_view(request):
-#     logout(request._request)
-#     return Response({"status": "Success"})
 
 
 class UserViewSet(viewsets.ModelViewSet):
