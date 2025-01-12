@@ -96,3 +96,23 @@ class Products(models.Model):
     class Meta:
         managed = True
         db_table = "products"
+
+
+
+class Claim(models.Model):
+    textClaim = models.CharField(max_length=512, blank=True, null=True)
+    publication_date = models.DateField(blank=True, null=True)
+    id_moderator = models.ForeignKey(
+        "CustomUser",
+        on_delete=models.CASCADE,
+        db_column="id_moderator",
+        related_name="moderator_claim",
+        blank=True,
+        null=True,
+    )
+    id_user = models.ForeignKey(
+        "CustomUser",
+        on_delete=models.CASCADE,
+        db_column="id_user",
+        related_name="user_claim",
+    )

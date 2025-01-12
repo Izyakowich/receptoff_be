@@ -680,3 +680,20 @@ def UpdateRequest(request, pk):
         return JsonResponse({"message": "Заявка не найдена"}, status=404)
     except Exception as e:
         return JsonResponse({"message": str(e)}, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def getClaim(request):
+    serializer = ClaimSerializer(Claim.objects, many=True)
+    return Response(serializer.data)
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def postClaim(request):
+    data = request.data.copy()
+    serializer = ClaimSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
