@@ -91,4 +91,6 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("user_info/", views.user_info, name="user_info"),
     path("update/<int:pk>/", views.UpdateRequest, name="async"),
+    #path("claim/", views.claim, name="claim"),
+    #path("rate_food/", views.rateFood, name="rate_food"),
 ]
