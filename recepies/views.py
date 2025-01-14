@@ -177,7 +177,7 @@ def PostProductToApplication(request, pk):
     try:
         product = Products.objects.get(pk=pk, status="enabled")
     except Products.DoesNotExist:
-        return Response("Такого продукта нет", status=400)
+        return Response("Такого продукта нет", status=404)
     try:
         print(application)
         print(product)
@@ -688,6 +688,7 @@ def getClaim(request):
     serializer = ClaimSerializer(Claim.objects, many=True)
     return Response(serializer.data)
 
+# добавить определение пользователя
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def postClaim(request):
