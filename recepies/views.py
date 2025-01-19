@@ -689,12 +689,66 @@ def getClaim(request):
     return Response(serializer.data)
 
 # добавить определение пользователя
+# @api_view(["POST"])
+# @permission_classes([AllowAny])
+# def addClaim(request):
+#     data = request.data.copy()
+#     serializer = ClaimSerializer(data=data)
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
-def postClaim(request):
-    data = request.data.copy()
-    serializer = ClaimSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def addClaim(request):
+    ssid = request.COOKIES["session_id"]
+    print(ssid)
+    try:
+        email = session_storage.get(ssid).decode("utf-8")
+        current_user = CustomUser.objects.get(email=email)
+    except:
+        return Response("Сессия не найдена")
+    try:
+        claim = get_object_or_404(
+            Claim, id_user=current_user, status="Опубликовано"
+        )
+    except:
+        return Response("Такой заявки не зарегистрировано")
+
+    claim.status = "Проверяется"
+    claim.publication_date = datetime.now().date()
+    claim.save()
+    serializer = ClaimSerializer(claim)
+    print("ok")
+    return Response(serializer.data)
+
+
+@api_view(["PUT"])
+@permission_classes([IsManager])
+def viewClaim(request, pk):
+    ssid = request.COOKIES["session_id"]
+    try:
+        email = session_storage.get(ssid).decode("utf-8")
+        current_user = CustomUser.objects.get(email=email)
+    except:
+        return Response("Сессия не найдена")
+
+    if not Claim.objects.filter(pk=pk).exists():
+        return Response(f"Жалобы с таким id нет")
+    claim = Claim.objects.get(pk=pk)
+
+    if claim.status != "Опубликовано" or claim.status != "Удалено":
+        return Response("Такой жалобы нет на проверке")
+
+    if request.data["status"] not in ["Удалено", "Опубликовано", "Рассмотрено"]:
+        return Response("Неверный статус!")
+
+    claim.status = request.data["status"]
+    # claim.publication_date = datetime.now().date()
+    claim.approving_date = datetime.now().date()
+    claim.id_moderator = current_user
+    claim.save()
+    serializer = ClaimSerializer(claim)
+    return Response(serializer.data)

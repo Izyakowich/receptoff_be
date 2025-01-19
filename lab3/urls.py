@@ -92,6 +92,7 @@ urlpatterns = [
     path("user_info/", views.user_info, name="user_info"),
     path("update/<int:pk>/", views.UpdateRequest, name="async"),
     path("claim/", views.getClaim, name="get_claim"),
-    path("claim/post/", views.postClaim, name="post_claim")
+    path("claim/post/", views.addClaim, name="post_claim"),
+    path("claim/admin/", views.viewClaim, name="view_claim")
     #path("rate_food/", views.rateFood, name="rate_food"),
 ]
