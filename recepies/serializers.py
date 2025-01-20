@@ -70,3 +70,15 @@ class ClaimSerializer(serializers.ModelSerializer):
     class Meta:
         model = Claim
         fields = "__all__"
+
+        def get_user_email(self, obj):
+            if obj.id_user:
+                return obj.id_user.email
+            else:
+                return None
+
+        def get_moderator_email(self, obj):
+            if obj.id_moderator:
+                return obj.id_moderator.email
+            else:
+                return None

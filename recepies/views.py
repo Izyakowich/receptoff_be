@@ -239,7 +239,7 @@ def getApplications(request):
 
     date_format = "%Y-%m-%d"
     start_date_str = request.query_params.get("start", "2023-01-01")
-    end_date_str = request.query_params.get("end", "2024-12-31")
+    end_date_str = request.query_params.get("end", "2025-12-31")
     start = datetime.strptime(start_date_str, date_format).date()
     end = datetime.strptime(end_date_str, date_format).date()
 
@@ -701,24 +701,33 @@ def getClaim(request):
 
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuth])
 def addClaim(request):
     ssid = request.COOKIES["session_id"]
-    print(ssid)
+    print("ssid =", ssid)
     try:
         email = session_storage.get(ssid).decode("utf-8")
         current_user = CustomUser.objects.get(email=email)
     except:
         return Response("Сессия не найдена")
-    try:
-        claim = get_object_or_404(
-            Claim, id_user=current_user, status="Опубликовано"
-        )
-    except:
-        return Response("Такой заявки не зарегистрировано")
+    # try:
+    #     claim = get_object_or_404(
+    #         id_user=current_user
+    #     )
+    #     print("claim??")
+    # except:
+    #     return Response("Такой заявки не зарегистрировано")
 
-    claim.status = "Проверяется"
-    claim.publication_date = datetime.now().date()
+    try:
+        claim = Claim.objects.get(id_user=current_user)
+    except:
+        claim = Claim(
+            status = "Проверяется",
+            publication_date = datetime.now().date(),
+            id_user = current_user
+        )
+    # claim.status = "Проверяется"
+    # claim.publication_date = datetime.now().date()
     claim.save()
     serializer = ClaimSerializer(claim)
     print("ok")
