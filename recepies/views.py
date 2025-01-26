@@ -688,17 +688,6 @@ def getClaim(request):
     serializer = ClaimSerializer(Claim.objects, many=True)
     return Response(serializer.data)
 
-# добавить определение пользователя
-# @api_view(["POST"])
-# @permission_classes([AllowAny])
-# def addClaim(request):
-#     data = request.data.copy()
-#     serializer = ClaimSerializer(data=data)
-#     if serializer.is_valid():
-#         serializer.save()
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(["POST"])
 @permission_classes([IsAuth])
@@ -748,8 +737,8 @@ def viewClaim(request, pk):
         return Response(f"Жалобы с таким id нет")
     claim = Claim.objects.get(pk=pk)
 
-    if claim.status != "Опубликовано" or claim.status != "Удалено":
-        return Response("Такой жалобы нет на проверке")
+    # if claim.status != "Опубликовано" or claim.status != "Удалено":
+    #     return Response("Такой жалобы нет на проверке")
 
     if request.data["status"] not in ["Удалено", "Опубликовано", "Рассмотрено"]:
         return Response("Неверный статус!")
