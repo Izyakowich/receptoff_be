@@ -22,4 +22,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.GetProducts),
     path("product/<int:id>/", views.GetProduct, name="product_url"),
+    path("delete", views.DeleteProduct),
 ]

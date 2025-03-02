@@ -15,12 +15,22 @@
   </div>
   </div>
 <div class="products_container">
-    {% for product in data.products %}
+    {% for product in products %}
     <div class="product_item">
-        <div class="product_image"><a href="{% url 'product_url' product.id %}"> <img src="{{ product.img }}" width="450", height="350"></a></div>
-        <a class="product_name" href="{% url 'product_url' product.id %}">{{ product.title }}</a>
+        <div class="product_image">
+          <a href="{% url 'product_url' product.product_id %}">
+            <img src="{{ product.photo }}" width="450", height="350">
 
+          </a>
+        </div>
+        <a class="product_name" href="{% url 'product_url' product.product_id %}">{{ product.product_name }}</a>
+        
+        <form action="/delete" method="POST">
+          {% csrf_token %}
+          <button type='submit' name= 'delete' value = {{product.product_id}}>Удалить</button>
+          </form>
     </div>
+    
     {% empty %}
         <div>Список пуст</div>
     {% endfor %}
