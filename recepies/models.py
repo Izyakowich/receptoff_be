@@ -106,7 +106,8 @@ class Claim(models.Model):
         ("deleted", "Удалено"),
     ]
     title_claim = models.CharField(max_length=128, blank=True, null=False)
-    text_сlaim = models.CharField(max_length=512, blank=True, null=True)
+    text_claim = models.CharField(max_length=512, blank=True, null=True)
+    admin_text_claim = models.CharField(max_length=512, blank=True, null=True)
     publication_date = models.DateField(blank=True, null=True)
     approving_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=16, blank=True, null=True, choices=Status)

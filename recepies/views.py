@@ -689,39 +689,90 @@ def getClaim(request):
     return Response(serializer.data)
 
 
+# @api_view(["POST"])
+# @permission_classes([IsAuth])
+# def addClaim(request):
+#     ssid = request.COOKIES["session_id"]
+#     print("ssid =", ssid)
+#     try:
+#         email = session_storage.get(ssid).decode("utf-8")
+#         current_user = CustomUser.objects.get(email=email)
+#     except:
+#         return Response("Сессия не найдена")
+#     # try:
+#     #     claim = get_object_or_404(
+#     #         id_user=current_user
+#     #     )
+#     #     print("claim??")
+#     # except:
+#     #     return Response("Такой заявки не зарегистрировано")
+
+#     try:
+#         claim = Claim.objects.get(id_user=current_user)
+#     except:
+#         claim = Claim(
+#             status = "Проверяется",
+#             publication_date = datetime.now().date(),
+#             id_user = current_user
+#         )
+#     # claim.status = "Проверяется"
+#     # claim.publication_date = datetime.now().date()
+#     claim.save()
+#     serializer = ClaimSerializer(claim)
+#     print("ok")
+#     return Response(serializer.data)
+import logging
+
+logger = logging.getLogger(__name__)
+
 @api_view(["POST"])
 @permission_classes([IsAuth])
 def addClaim(request):
-    ssid = request.COOKIES["session_id"]
-    print("ssid =", ssid)
+    ssid = request.COOKIES.get("session_id")
+    if not ssid:
+        logger.error("Сессия не найдена: отсутствует session_id")
+        return Response("Сессия не найдена", status=400)
+
     try:
         email = session_storage.get(ssid).decode("utf-8")
         current_user = CustomUser.objects.get(email=email)
-    except:
-        return Response("Сессия не найдена")
-    # try:
-    #     claim = get_object_or_404(
-    #         id_user=current_user
-    #     )
-    #     print("claim??")
-    # except:
-    #     return Response("Такой заявки не зарегистрировано")
+    except Exception as e:
+        logger.error(f"Ошибка при получении пользователя: {e}")
+        return Response("Сессия не найдена", status=400)
 
-    try:
-        claim = Claim.objects.get(id_user=current_user)
-    except:
-        claim = Claim(
-            status = "Проверяется",
-            publication_date = datetime.now().date(),
-            id_user = current_user
-        )
-    # claim.status = "Проверяется"
-    # claim.publication_date = datetime.now().date()
+    # Получаем данные из запроса
+    title_claim = request.data.get("title_claim")
+    text_claim = request.data.get("text_claim")
+
+    if not title_claim:
+        logger.error("Не указаны title_claim")
+        return Response("Необходимо указать тему жалобы", status=400)
+
+    if not text_claim:
+        logger.error("Не указан text_claim")
+        return Response("Необходимо указать текст жалобы", status=400)
+
+    # Всегда создаем новую жалобу
+    claim = Claim(
+        title_claim=title_claim,
+        text_claim=text_claim,
+        status="Проверяется",
+        publication_date=datetime.now().date(),
+        id_user=current_user
+    )
+
+    # Сохраняем жалобу в базу данных
     claim.save()
-    serializer = ClaimSerializer(claim)
-    print("ok")
-    return Response(serializer.data)
+    logger.info(f"Создана новая жалоба: {claim.id}")
 
+    # Сериализуем данные и возвращаем ответ
+    serializer = ClaimSerializer(claim)
+    return Response(serializer.data, status=200)
+
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 @api_view(["PUT"])
 @permission_classes([IsManager])
@@ -731,22 +782,21 @@ def viewClaim(request, pk):
         email = session_storage.get(ssid).decode("utf-8")
         current_user = CustomUser.objects.get(email=email)
     except:
-        return Response("Сессия не найдена")
+        return Response("Сессия не найдена", status=400)
 
     if not Claim.objects.filter(pk=pk).exists():
-        return Response(f"Жалобы с таким id нет")
+        return Response(f"Жалобы с таким id нет", status=404)
     claim = Claim.objects.get(pk=pk)
 
-    # if claim.status != "Опубликовано" or claim.status != "Удалено":
-    #     return Response("Такой жалобы нет на проверке")
-
     if request.data["status"] not in ["Удалено", "Опубликовано", "Рассмотрено"]:
-        return Response("Неверный статус!")
+        return Response("Неверный статус!", status=400)
 
+    # Обновление статуса и комментария администратора
     claim.status = request.data["status"]
-    # claim.publication_date = datetime.now().date()
+    claim.admin_text_claim = request.data.get("admin_text_claim", "")  # Сохранение комментария
     claim.approving_date = datetime.now().date()
     claim.id_moderator = current_user
     claim.save()
+
     serializer = ClaimSerializer(claim)
     return Response(serializer.data)
