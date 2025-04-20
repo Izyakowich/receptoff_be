@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -163,9 +164,17 @@ REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 
 
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_STORAGE_BUCKET_NAME = 'products'     # Бакет должен уже быть создан
-AWS_ACCESS_KEY_ID = 'minio'
-AWS_SECRET_ACCESS_KEY = 'minio124'
-AWS_S3_ENDPOINT_URL = 'http://127.0.0.1:9000'
+# STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# AWS_STORAGE_BUCKET_NAME = 'products'     # Бакет должен уже быть создан
+# AWS_ACCESS_KEY_ID = 'minio'
+# AWS_SECRET_ACCESS_KEY = 'minio124'
+# AWS_S3_ENDPOINT_URL = 'http://127.0.0.1:9000'
+
+# settings.py
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+COLAB_API_URL = "https://colab.research.google.com/drive/1M53LM0YONWRmyb09r6VtDw1eOL2Bd1EQ?usp=sharing/generate"  # Должен заканчиваться на /generate
+COLAB_API_KEY = "vkrvkrvkr"  # Должен совпадать с Colab

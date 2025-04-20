@@ -21,6 +21,8 @@ from .permissions import *
 from django.conf import settings
 import redis
 import uuid
+from django.core.files.storage import default_storage
+from django.core.files.storage import FileSystemStorage
 from django.contrib.sessions.models import Session
 from django.http import HttpResponseBadRequest, HttpResponseServerError
 
@@ -90,6 +92,39 @@ def GetProductsById(request, pk):
     if request.method == "GET":
         serializer = ProductSerializer(product)
         return Response(serializer.data)
+
+
+from services.remoteGeneration import RemoteImageGenerator
+
+@api_view(['POST'])
+def generateProductImage(request, pk):
+    try:
+        product = Products.objects.get(pk=pk)
+        if not product.product_name:
+            return Response({"status": "error", "message": "Название продукта обязательно"}, status=400)
+        
+        generator = RemoteImageGenerator()
+        image_file = generator.generateImage(product.product_name)
+        
+        if image_file:
+            product.photo.save(
+                f"{product.id}_generated.png", 
+                image_file,
+                save=True
+            )
+            return Response({
+                "status": "success",
+                "image_url": request.build_absolute_uri(product.photo.url),
+                "product_id": product.id
+            })
+            
+        return Response({"status": "error", "message": "Не удалось сгенерировать изображение"}, status=500)
+        
+    except Products.DoesNotExist:
+        return Response({"status": "error", "message": "Продукт не найден"}, status=404)
+    except Exception as e:
+        logger.error(f"Image generation error: {str(e)}")
+        return Response({"status": "error", "message": "Внутренняя ошибка сервера"}, status=500)
 
 
 # @swagger_auto_schema(method="post", request_body=ProductSerializer)

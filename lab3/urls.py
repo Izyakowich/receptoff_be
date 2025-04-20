@@ -16,12 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from lab3 import settings
 from recepies import views
 from rest_framework import routers
 from rest_framework import permissions
 from django.urls import path, include
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from django.conf.urls.static import static
+from lab3.settings import *
 
 router = routers.DefaultRouter()
 
@@ -48,6 +51,7 @@ urlpatterns = [
     path("", include(router.urls)),
     path("products/", views.GetProducts, name="products-list"),
     path("products/<int:pk>/", views.GetProductsById, name="get-product-by-id"),
+    path('products/<int:pk>/generateImage/', views.generateProductImage, name='generate-product-image'),
     path("products/<int:pk>/delete/", views.deleteProduct, name="delete-product"),
     path(
         "products/<int:pk>/post/",
@@ -95,4 +99,4 @@ urlpatterns = [
     path("claim/post/", views.addClaim, name="post_claim"),
     path("claim/<int:pk>/adminput/", views.viewClaim, name="view_claim")
     #path("rate_food/", views.rateFood, name="rate_food"),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

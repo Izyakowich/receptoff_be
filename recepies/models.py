@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import PermissionsMixin, UserManager, AbstractBaseUser
+from services.generateImage import ImageGenerator
+from django.core.files.storage import FileSystemStorage
 
 
 class NewUserManager(UserManager):
@@ -82,6 +84,34 @@ class ApplicationProducts(models.Model):
         unique_together = (("application", "products"),)
 
 
+# class Products(models.Model):
+#     Status = [
+#         ("enabled", "enabled"),
+#         ("deleted", "deleted"),
+#     ]
+#     product_name = models.CharField(max_length=64, blank=True, null=True)
+#     product_info = models.CharField(max_length=256, blank=True, null=True)
+#     status = models.CharField(max_length=32, blank=True, null=True, choices=Status)
+#     photo = models.CharField(max_length=256, blank=True, null=True)
+#     price = models.IntegerField(default=0)
+#     rating = models.FloatField(max_length=16, blank=True, null=True)
+
+#     class Meta:
+#         managed = True
+#         db_table = "products"
+
+#     def generate_and_set_image(self):
+#         """Генерирует и устанавливает изображение для продукта"""
+#         try:
+#             generator = ImageGenerator()
+#             image_file = generator.generateImage(self.product_name)
+#             self.photo.save(f"{self.id}_generated.png", image_file)
+#             self.save()
+#             return True
+#         except Exception as e:
+#             print(f"Ошибка генерации изображения: {e}")
+#             return False
+ 
 class Products(models.Model):
     Status = [
         ("enabled", "enabled"),
@@ -90,13 +120,31 @@ class Products(models.Model):
     product_name = models.CharField(max_length=64, blank=True, null=True)
     product_info = models.CharField(max_length=256, blank=True, null=True)
     status = models.CharField(max_length=32, blank=True, null=True, choices=Status)
-    photo = models.CharField(max_length=256, blank=True, null=True)
+    photo = models.ImageField(
+        upload_to='products/', 
+        blank=True, 
+        null=True,
+        storage=FileSystemStorage()  # Явно указываем локальное хранилище
+    ),
     price = models.IntegerField(default=0)
+    rating = models.FloatField(max_length=16, blank=True, null=True)
 
     class Meta:
         managed = True
         db_table = "products"
 
+    def generate_and_set_image(self):
+        """Генерирует и устанавливает изображение для продукта"""
+        try:
+            generator = ImageGenerator()
+            image_file = generator.generateImage(self.product_name)
+            if image_file:
+                self.photo.save(f"{self.id}_generated.png", image_file, save=True)
+                return True
+            return False
+        except Exception as e:
+            print(f"Ошибка генерации изображения: {e}")
+            return False
 
 
 class Claim(models.Model):
