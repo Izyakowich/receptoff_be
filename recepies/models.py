@@ -1,8 +1,10 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import PermissionsMixin, UserManager, AbstractBaseUser
-from services.generateImage import ImageGenerator
+from services.localGeneration import LocalImageGenerator
 from django.core.files.storage import FileSystemStorage
+import logging
+from minio import Minio
 
 
 class NewUserManager(UserManager):
@@ -21,21 +23,33 @@ class NewUserManager(UserManager):
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(("email адрес"), unique=True)
-    password = models.CharField(max_length=200, verbose_name="Пароль")
-    is_staff = models.BooleanField(
-        default=False, verbose_name="Является ли пользователь менеджером?"
-    )
-    is_superuser = models.BooleanField(
-        default=False, verbose_name="Является ли пользователь админом?"
-    )
-
-    USERNAME_FIELD = "email"
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+    middle_name = models.CharField(max_length=30, blank=True)
+    phone_number = models.CharField(max_length=15, blank=True)
+    address = models.TextField(blank=True)
 
     objects = NewUserManager()
 
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
     class Meta:
         managed = True
+        db_table = "custom_user"
+
+    def __str__(self):
+        return self.email
+
+    def has_perm(self, perm, obj=None):
+        return True
+
+    def has_module_perms(self, app_label):
+        return True
 
 
 class Application(models.Model):
@@ -111,7 +125,8 @@ class ApplicationProducts(models.Model):
 #         except Exception as e:
 #             print(f"Ошибка генерации изображения: {e}")
 #             return False
- 
+
+
 class Products(models.Model):
     Status = [
         ("enabled", "enabled"),
@@ -120,12 +135,7 @@ class Products(models.Model):
     product_name = models.CharField(max_length=64, blank=True, null=True)
     product_info = models.CharField(max_length=256, blank=True, null=True)
     status = models.CharField(max_length=32, blank=True, null=True, choices=Status)
-    photo = models.ImageField(
-        upload_to='products/', 
-        blank=True, 
-        null=True,
-        storage=FileSystemStorage()  # Явно указываем локальное хранилище
-    ),
+    photo = models.ImageField(upload_to="products/", blank=True, null=True)
     price = models.IntegerField(default=0)
     rating = models.FloatField(max_length=16, blank=True, null=True)
 
@@ -136,14 +146,24 @@ class Products(models.Model):
     def generate_and_set_image(self):
         """Генерирует и устанавливает изображение для продукта"""
         try:
-            generator = ImageGenerator()
-            image_file = generator.generateImage(self.product_name)
-            if image_file:
-                self.photo.save(f"{self.id}_generated.png", image_file, save=True)
+            if not self.product_name:
+                logger.error(f"Product {self.id} has no name")
+                return False
+
+            generator = LocalImageGenerator()
+            image = generator.generate_image(self.product_name)
+
+            if image:
+                self.photo.save(f"{self.id}_generated.png", image, save=True)
+                logger.info(
+                    f"Successfully generated and saved image for product {self.id}"
+                )
                 return True
-            return False
+            else:
+                logger.error(f"Failed to generate image for product {self.id}")
+                return False
         except Exception as e:
-            print(f"Ошибка генерации изображения: {e}")
+            logger.error(f"Error generating image for product {self.id}: {str(e)}")
             return False
 
 

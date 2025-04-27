@@ -25,8 +25,17 @@ from django.core.files.storage import default_storage
 from django.core.files.storage import FileSystemStorage
 from django.contrib.sessions.models import Session
 from django.http import HttpResponseBadRequest, HttpResponseServerError
+from services.local_food_image_generator import LocalFoodImageGenerator
+from services.image_generation import StableDiffusionImageGenerator
+from services.image_generation import UnsplashImageGenerator
+from services.image_generation import FoodishImageGenerator
+from services.image_generation import MealDBImageGenerator
+from services.image_generation import SpoonacularImageGenerator
+import logging
 
 session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+
+logger = logging.getLogger(__name__)
 
 
 class CurrentUserSingleton:
@@ -48,11 +57,6 @@ class CurrentUserSingleton:
 
 @api_view(["GET"])
 def GetProducts(request):
-    # print("get")
-    # products = Products.objects.all()
-    # serializer = ProductSerializer(product, many=True)
-    # return Response(serializer.data)
-
     title = request.query_params.get("title")
     products = Products.objects.filter(status="enabled")
 
@@ -65,8 +69,9 @@ def GetProducts(request):
         application = Application.objects.get(
             id_user=current_user, status="Зарегистрирован"
         )
-        # .latest("creation_date")
-        serializer = ProductSerializer(products, many=True)
+        serializer = ProductSerializer(
+            products, many=True, context={"request": request}
+        )
         print("appicationnnnnnn", application)
         application_serializer = ApplicationSerializer(application)
         print("application_serializer", application_serializer)
@@ -79,7 +84,9 @@ def GetProducts(request):
         return Response(result)
     except:
         print("2")
-        serializer = ProductSerializer(products, many=True)
+        serializer = ProductSerializer(
+            products, many=True, context={"request": request}
+        )
         result = {"products": serializer.data}
         return Response(result)
 
@@ -90,41 +97,48 @@ def GetProductsById(request, pk):
         return Response(f"Продукта с таким id нет")
     product = get_object_or_404(Products, pk=pk)
     if request.method == "GET":
-        serializer = ProductSerializer(product)
+        serializer = ProductSerializer(product, context={"request": request})
         return Response(serializer.data)
 
 
-from services.remoteGeneration import RemoteImageGenerator
-
-@api_view(['POST'])
+@api_view(["POST"])
 def generateProductImage(request, pk):
     try:
         product = Products.objects.get(pk=pk)
-        if not product.product_name:
-            return Response({"status": "error", "message": "Название продукта обязательно"}, status=400)
-        
-        generator = RemoteImageGenerator()
-        image_file = generator.generateImage(product.product_name)
-        
-        if image_file:
-            product.photo.save(
-                f"{product.id}_generated.png", 
-                image_file,
-                save=True
+
+        if product.photo:
+            logger.info(f"Product {pk} already has an image")
+            return Response(
+                {"message": "Image already exists"}, status=status.HTTP_200_OK
             )
-            return Response({
-                "status": "success",
-                "image_url": request.build_absolute_uri(product.photo.url),
-                "product_id": product.id
-            })
-            
-        return Response({"status": "error", "message": "Не удалось сгенерировать изображение"}, status=500)
-        
+
+        generator = LocalFoodImageGenerator()
+        image = generator.generate_image(product.title)
+
+        if image:
+            product.photo.save(f"{product.title}.png", image)
+            product.save()
+            logger.info(f"Successfully generated and saved image for product {pk}")
+            return Response(
+                {"message": "Image generated successfully"}, status=status.HTTP_200_OK
+            )
+        else:
+            logger.error(f"Failed to generate image for product {pk}")
+            return Response(
+                {"message": "Failed to generate image"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     except Products.DoesNotExist:
-        return Response({"status": "error", "message": "Продукт не найден"}, status=404)
+        logger.error(f"Product {pk} not found")
+        return Response(
+            {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+        )
     except Exception as e:
-        logger.error(f"Image generation error: {str(e)}")
-        return Response({"status": "error", "message": "Внутренняя ошибка сервера"}, status=500)
+        logger.error(f"Error generating image for product {pk}: {e}")
+        return Response(
+            {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # @swagger_auto_schema(method="post", request_body=ProductSerializer)
@@ -760,6 +774,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @api_view(["POST"])
 @permission_classes([IsAuth])
 def addClaim(request):
@@ -793,7 +808,7 @@ def addClaim(request):
         text_claim=text_claim,
         status="Проверяется",
         publication_date=datetime.now().date(),
-        id_user=current_user
+        id_user=current_user,
     )
 
     # Сохраняем жалобу в базу данных
@@ -808,6 +823,7 @@ def addClaim(request):
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 @api_view(["PUT"])
 @permission_classes([IsManager])
@@ -828,10 +844,48 @@ def viewClaim(request, pk):
 
     # Обновление статуса и комментария администратора
     claim.status = request.data["status"]
-    claim.admin_text_claim = request.data.get("admin_text_claim", "")  # Сохранение комментария
+    claim.admin_text_claim = request.data.get(
+        "admin_text_claim", ""
+    )  # Сохранение комментария
     claim.approving_date = datetime.now().date()
     claim.id_moderator = current_user
     claim.save()
 
     serializer = ClaimSerializer(claim)
     return Response(serializer.data)
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuth])
+def updateUserProfile(request):
+    try:
+        ssid = request.COOKIES["session_id"]
+        email = session_storage.get(ssid).decode("utf-8")
+        user = CustomUser.objects.get(email=email)
+    except:
+        return Response("Сессия не найдена", status=status.HTTP_401_UNAUTHORIZED)
+
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        # Убедимся, что пользователь не может изменить email и пароль через этот эндпоинт
+        if "email" in serializer.validated_data:
+            del serializer.validated_data["email"]
+        if "password" in serializer.validated_data:
+            del serializer.validated_data["password"]
+
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuth])
+def getUserProfile(request):
+    try:
+        ssid = request.COOKIES["session_id"]
+        email = session_storage.get(ssid).decode("utf-8")
+        user = CustomUser.objects.get(email=email)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+    except:
+        return Response("Сессия не найдена", status=status.HTTP_401_UNAUTHORIZED)

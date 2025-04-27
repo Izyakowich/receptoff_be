@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "recepies",
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -164,17 +165,50 @@ REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 
 
-# STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-# AWS_STORAGE_BUCKET_NAME = 'products'     # Бакет должен уже быть создан
-# AWS_ACCESS_KEY_ID = 'minio'
-# AWS_SECRET_ACCESS_KEY = 'minio124'
-# AWS_S3_ENDPOINT_URL = 'http://127.0.0.1:9000'
+STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+AWS_STORAGE_BUCKET_NAME = (
+    "receptoff/content/dishes_images"  # Бакет должен уже быть создан
+)
+AWS_ACCESS_KEY_ID = "minio"
+AWS_SECRET_ACCESS_KEY = "minio124"
+AWS_S3_ENDPOINT_URL = "http://127.0.0.1:9000"
 
 # settings.py
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+
+# Создаем директорию для медиа-файлов, если она не существует
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT)
+    os.makedirs(os.path.join(MEDIA_ROOT, "products/"))
 
 COLAB_API_URL = "https://colab.research.google.com/drive/1M53LM0YONWRmyb09r6VtDw1eOL2Bd1EQ?usp=sharing/generate"  # Должен заканчиваться на /generate
 COLAB_API_KEY = "vkrvkrvkr"  # Должен совпадать с Colab
+
+# MinIO settings
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME", "products")
+
+# Configure Django to use MinIO for media files
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
+AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
+AWS_S3_ENDPOINT_URL = f'{"https" if MINIO_SECURE else "http"}://{MINIO_ENDPOINT}'
+AWS_S3_USE_SSL = MINIO_SECURE
+AWS_S3_FILE_OVERWRITE = True
+AWS_DEFAULT_ACL = None
+
+# Media files configuration
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
+
+# Create media directories if they don't exist
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT)
+    os.makedirs(os.path.join(MEDIA_ROOT, "products/"))

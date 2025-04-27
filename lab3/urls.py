@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
 from lab3 import settings
@@ -45,13 +46,14 @@ router.register(r"user", views.UserViewSet, basename="user")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # path("", views.GetProducts),
-    # path("product/<int:id>/", views.GetProduct, name="product_url"),
-    # path("delete", views.DeleteProduct),
-    path("", include(router.urls)),
+    path("api/", include(router.urls)),
     path("products/", views.GetProducts, name="products-list"),
     path("products/<int:pk>/", views.GetProductsById, name="get-product-by-id"),
-    path('products/<int:pk>/generateImage/', views.generateProductImage, name='generate-product-image'),
+    path(
+        "products/<int:pk>/generateImage/",
+        views.generateProductImage,
+        name="generate-product-image",
+    ),
     path("products/<int:pk>/delete/", views.deleteProduct, name="delete-product"),
     path(
         "products/<int:pk>/post/",
@@ -85,11 +87,14 @@ urlpatterns = [
         views.DeleteApplicationProduct,
         name="application_product_delete",
     ),
+    path("user/profile/update/", views.updateUserProfile, name="update-user-profile"),
+    path("user/profile/", views.getUserProfile, name="get-user-profile"),
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
     ),
+    path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
     path("auth/api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
@@ -97,6 +102,9 @@ urlpatterns = [
     path("update/<int:pk>/", views.UpdateRequest, name="async"),
     path("claim/", views.getClaim, name="get_claim"),
     path("claim/post/", views.addClaim, name="post_claim"),
-    path("claim/<int:pk>/adminput/", views.viewClaim, name="view_claim")
-    #path("rate_food/", views.rateFood, name="rate_food"),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path("claim/<int:pk>/adminput/", views.viewClaim, name="view_claim"),
+]
+
+# Добавляем URL-паттерны для медиа-файлов в режиме разработки
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

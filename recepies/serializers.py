@@ -1,14 +1,36 @@
 from rest_framework import serializers
+from django.conf import settings
 
 from .models import *
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    photo_url = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
+
     class Meta:
         # Модель, которую мы сериализуем
         model = Products
         # Поля, которые мы сериализуем
-        fields = "__all__"
+        fields = [
+            "id",
+            "product_name",
+            "product_info",
+            "status",
+            "photo",
+            "photo_url",
+            "price",
+            "rating",
+        ]
+
+    def get_photo(self, obj):
+        return self.get_photo_url(obj)
+
+    def get_photo_url(self, obj):
+        # Always use the product id to generate the image filename
+        return (
+            f"http://localhost:9000/receptoff/content/dishes_images/dish_{obj.id}.png"
+        )
 
         # def get_fields(self):
         #     new_fields = OrderedDict()
@@ -58,12 +80,35 @@ class ApplicationProductstSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    is_staff = serializers.BooleanField(default=False, required=False)
-    is_superuser = serializers.BooleanField(default=False, required=False)
-
     class Meta:
         model = CustomUser
-        fields = ["email", "password", "is_staff", "is_superuser"]
+        fields = [
+            "id",
+            "email",
+            "password",
+            "is_superuser",
+            "is_staff",
+            "first_name",
+            "last_name",
+            "middle_name",
+            "phone_number",
+            "address",
+        ]
+        extra_kwargs = {"password": {"write_only": True}}
+
+    def create(self, validated_data):
+        user = CustomUser.objects.create_user(
+            email=validated_data["email"],
+            password=validated_data["password"],
+            is_superuser=validated_data.get("is_superuser", False),
+            is_staff=validated_data.get("is_staff", False),
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+            middle_name=validated_data.get("middle_name", ""),
+            phone_number=validated_data.get("phone_number", ""),
+            address=validated_data.get("address", ""),
+        )
+        return user
 
 
 class ClaimSerializer(serializers.ModelSerializer):
