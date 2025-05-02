@@ -889,3 +889,29 @@ def getUserProfile(request):
         return Response(serializer.data)
     except:
         return Response("Сессия не найдена", status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuth])
+def getRecommendations(request):
+    ssid = request.COOKIES["session_id"]
+    try:
+        email = session_storage.get(ssid).decode("utf-8")
+        current_user = CustomUser.objects.get(email=email)
+    except:
+        return Response("Сессия не найдена")
+
+    try:
+        from recommender import DishRecommender
+
+        recommender = DishRecommender()
+        recommender.load_data()
+
+        recommendations = recommender.recommend_dishes(current_user.id)
+        serializer = ProductSerializer(
+            recommendations, many=True, context={"request": request}
+        )
+
+        return Response(serializer.data)
+    except Exception as e:
+        return Response(f"Ошибка при получении рекомендаций: {str(e)}", status=500)

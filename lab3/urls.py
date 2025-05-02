@@ -103,6 +103,7 @@ urlpatterns = [
     path("claim/", views.getClaim, name="get_claim"),
     path("claim/post/", views.addClaim, name="post_claim"),
     path("claim/<int:pk>/adminput/", views.viewClaim, name="view_claim"),
+    path("recommendations/", views.getRecommendations, name="get-recommendations"),
 ]
 
 # Добавляем URL-паттерны для медиа-файлов в режиме разработки
